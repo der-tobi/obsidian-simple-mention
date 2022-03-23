@@ -13,7 +13,7 @@ You can set:
 
 ## Shortcuts
 ### In edit mode
-`ctrl+space` or `ctrl+click` on a mention, the right side pane opens with all occurrences of that mention.
+`ctrl+space` or `ctrl+click` on a mention, opens the right side pane with all occurrences of that mention.
 
 ### In preview mode
 When you click on a mention, the right side pane opens with all occurrences of that mention.
