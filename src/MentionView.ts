@@ -104,7 +104,7 @@ export class MentionView extends ItemView {
     private renderIncludeComplededTasksCheckbox(): void {
         this.controlsContainer.createDiv('mention-view-includeCompleted', (el) => {
             this.includeCompletedLabel = document.createElement('div');
-            this.includeCompletedLabel.innerHTML = 'Include completed tasks';
+            this.includeCompletedLabel.innerText = 'Include completed tasks';
 
             this.includeCompletedCheckbox = document.createElement('div');
             this.includeCompletedCheckbox.addClass('checkbox-container');
@@ -183,7 +183,7 @@ export class MentionView extends ItemView {
             this.registerTodoCheckboxClick(el, occurence);
             this.registerItemClick(el, occurence);
             el.createDiv('mention-view-item-file', (el) => {
-                el.innerHTML = occurence.path;
+                el.innerText = occurence.path;
             });
         });
     }
