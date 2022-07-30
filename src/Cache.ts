@@ -49,6 +49,10 @@ export class Cache {
         this.subscribers.push(fn);
     }
 
+    public unsubscribeAll(): void {
+        this.subscribers = [];
+    }
+
     public loadVault(): Promise<void> {
         return this.mutex.runExclusive(async () => {
             await Promise.all(
