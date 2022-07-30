@@ -4,8 +4,13 @@ import { MentionSettings } from './Settings';
 
 export class PreviewStyle {
     private subscribers: ((text: string) => void)[] = [];
+    private meMentionOrMentionRegex: RegExp = undefined;
 
-    constructor(private element: HTMLElement, private settings: MentionSettings) {}
+    constructor(private element: HTMLElement, private settings: MentionSettings) {
+        // It is OK to set this regular expression here. As for now, the updates of the settings is not supported
+        // TODO: Add a function to update a new RegExp after setting a new TriggerPhrase / new MeMentionName
+        this.meMentionOrMentionRegex = getMeMentionOrMentionRegex(this.settings.mentionTriggerPhrase, this.settings.meMentionName);
+    }
 
     public subscribeToMentionClick(fn: (text: string) => void): void {
         this.subscribers.push(fn);
@@ -16,10 +21,7 @@ export class PreviewStyle {
             const nodes = this.getChildNodes(this.element);
 
             for (let node of nodes) {
-                let replacementNodes = this.getReplacementNodes(
-                    node.textContent,
-                    getMeMentionOrMentionRegex(this.settings.mentionTriggerPhrase, this.settings.meMentionName)
-                );
+                let replacementNodes = this.getReplacementNodes(node.textContent, this.meMentionOrMentionRegex);
                 if (replacementNodes) {
                     node.replaceWith(...replacementNodes);
                 }
