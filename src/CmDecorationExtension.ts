@@ -1,4 +1,4 @@
-import { RangeSetBuilder } from '@codemirror/rangeset';
+import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView, MatchDecorator, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { App } from 'obsidian';
 
