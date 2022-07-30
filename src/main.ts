@@ -68,6 +68,8 @@ export default class MentionPlugin extends Plugin {
     }
 
     public onunload(): void {
+        this.cache.unsubscribeAll();
+
         if (this.style != null) {
             this.style.removeStyle();
         }
