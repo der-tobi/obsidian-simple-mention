@@ -229,7 +229,7 @@ export class MentionView extends ItemView {
             const content = await this.app.vault.read(file);
 
             if (workspace.getActiveFile() && workspace.getActiveFile().path !== occurence.path) {
-                workspace.splitActiveLeaf().openFile(file, {
+                workspace.getLeaf(true).openFile(file, {
                     active: true,
                     eState: {
                         match: {
@@ -239,7 +239,7 @@ export class MentionView extends ItemView {
                     },
                 });
             } else {
-                workspace.getUnpinnedLeaf().openFile(file, {
+                workspace.getLeaf(false).openFile(file, {
                     active: true,
                     eState: {
                         match: {
