@@ -21,7 +21,7 @@ export class PreviewStyle {
             const nodes = this.getChildNodes(this.element);
 
             for (let node of nodes) {
-                let replacementNodes = this.getReplacementNodes(node.textContent, this.meMentionOrMentionRegex);
+                let replacementNodes = this.getReplacementNodesOrNull(node.textContent, this.meMentionOrMentionRegex);
                 if (replacementNodes) {
                     node.replaceWith(...replacementNodes);
                 }
@@ -41,7 +41,7 @@ export class PreviewStyle {
         return nodes;
     }
 
-    private getReplacementNodes(text: string, regExp: RegExp): (string | Node)[] {
+    private getReplacementNodesOrNull(text: string, regExp: RegExp): (string | Node)[] {
         const matches = [...text.matchAll(regExp)];
 
         if (matches.length > 0) {
@@ -68,6 +68,8 @@ export class PreviewStyle {
 
             return parts;
         }
+
+        return null;
     }
 
     private surroundWithAnchorTag(text: string, className: string): HTMLAnchorElement {
