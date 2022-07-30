@@ -15,7 +15,6 @@ export default class MentionPlugin extends Plugin {
     private cache: Cache | undefined;
     private style: Style | undefined;
 
-    mentionView: MentionView;
     settings: MentionSettings;
 
     public async onload() {
@@ -26,12 +25,19 @@ export default class MentionPlugin extends Plugin {
 
         this.cache = new Cache(this.app.metadataCache, this.app.vault, this.settings);
 
+        this.registerView(VIEW_TYPE_MENTION, (leaf: WorkspaceLeaf) => {
+            const mentionView = new MentionView(leaf, this.cache);
+            this.cache.subscribe(mentionView.updateView.bind(mentionView));
+
+            return mentionView;
+        });
+
         this.initMentionView();
 
         this.registerMarkdownPostProcessor((element: HTMLElement) => {
             const previewStyler = new PreviewStyle(element, this.settings);
             previewStyler.addPreviewMentionStyle();
-            previewStyler.subscribeToMentionClick(this.previewClickHanlder.bind(this));
+            previewStyler.subscribeToMentionClick(this.previewClickHandler.bind(this));
         });
 
         this.registerEditorExtension(
@@ -51,13 +57,6 @@ export default class MentionPlugin extends Plugin {
     }
 
     public initMentionView() {
-        this.registerView(VIEW_TYPE_MENTION, (leaf: WorkspaceLeaf) => {
-            this.mentionView = new MentionView(leaf, this.cache);
-            this.cache.subscribe(this.mentionView.updateView.bind(this.mentionView));
-
-            return this.mentionView;
-        });
-
         this.app.workspace.onLayoutReady(() => {
             if (this.app.workspace.getLeavesOfType(VIEW_TYPE_MENTION).length) {
                 return;
@@ -95,12 +94,26 @@ export default class MentionPlugin extends Plugin {
         this.style.appendStyle();
     }
 
-    private previewClickHanlder(text: string) {
-        this.mentionView.selectMentionByKey(text.replace(this.settings.mentionTriggerPhrase, ''));
+    private async previewClickHandler(text: string) {
+        await this.activateMentionView();
+
+        this.app.workspace.getActiveViewOfType(MentionView).selectMentionByKey(text.replace(this.settings.mentionTriggerPhrase, ''));
     }
 
-    private searchForMention(lineNumber: number, posOnLine: number, path: string) {
-        const mention = this.cache.getMentionAt(path, lineNumber, posOnLine);
-        this.mentionView.selectMentionByKey(mention.name);
+    private async searchForMention(lineNumber: number, posOnLine: number, path: string) {
+        await this.activateMentionView();
+
+        this.app.workspace.getActiveViewOfType(MentionView).selectMentionByKey(this.cache.getMentionAt(path, lineNumber, posOnLine)?.name);
+    }
+
+    async activateMentionView() {
+        this.app.workspace.detachLeavesOfType(VIEW_TYPE_MENTION);
+
+        await this.app.workspace.getRightLeaf(false).setViewState({
+            type: VIEW_TYPE_MENTION,
+            active: true,
+        });
+
+        this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(VIEW_TYPE_MENTION)[0]);
     }
 }
