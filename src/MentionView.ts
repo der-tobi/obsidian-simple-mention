@@ -208,53 +208,47 @@ export class MentionView extends ItemView {
     }
 
     private registerTodoCheckboxClick(el: Element, occurence: Occurence): void {
-        el.getElementsByTagName('input')[0]?.addEventListener('input', (e) => {
+        el.getElementsByTagName('input')[0]?.addEventListener('input', async (e) => {
             const separator = '\n';
             const checked = (e.target as HTMLInputElement).checked;
             const file = this.app.vault.getAbstractFileByPath(occurence.path) as TFile;
-            const fileContents = this.app.vault.read(file);
+            const fileContents = await this.app.vault.read(file);
+            const fileLines = fileContents.split(separator);
 
-            fileContents.then((content) => {
-                const fileLines = content.split(separator);
-                fileLines[occurence.line.number - 1] = fileLines[occurence.line.number - 1].replace(
-                    TASK_REG_EXP,
-                    `${checked ? '[x]' : '[ ]'}`
-                );
+            fileLines[occurence.line.number - 1] = fileLines[occurence.line.number - 1].replace(TASK_REG_EXP, `${checked ? '[x]' : '[ ]'}`);
+            this.app.vault.modify(file, fileLines.join(separator));
 
-                this.app.vault.modify(file, fileLines.join(separator));
-            });
             e.stopPropagation();
         });
     }
 
     private registerItemClick(el: HTMLDivElement, occurence: Occurence): void {
-        el.onClickEvent((_) => {
+        el.onClickEvent(async (_) => {
             const file = this.app.vault.getAbstractFileByPath(occurence.path) as TFile;
             const workspace = this.app.workspace;
+            const content = await this.app.vault.read(file);
 
-            this.app.vault.read(file).then((content) => {
-                if (workspace.getActiveFile() && workspace.getActiveFile().path !== occurence.path) {
-                    workspace.splitActiveLeaf().openFile(file, {
-                        active: true,
-                        eState: {
-                            match: {
-                                content,
-                                matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
-                            },
+            if (workspace.getActiveFile() && workspace.getActiveFile().path !== occurence.path) {
+                workspace.splitActiveLeaf().openFile(file, {
+                    active: true,
+                    eState: {
+                        match: {
+                            content,
+                            matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
                         },
-                    });
-                } else {
-                    workspace.getUnpinnedLeaf().openFile(file, {
-                        active: true,
-                        eState: {
-                            match: {
-                                content,
-                                matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
-                            },
+                    },
+                });
+            } else {
+                workspace.getUnpinnedLeaf().openFile(file, {
+                    active: true,
+                    eState: {
+                        match: {
+                            content,
+                            matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
                         },
-                    });
-                }
-            });
+                    },
+                });
+            }
         });
     }
 }
