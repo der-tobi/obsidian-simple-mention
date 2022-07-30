@@ -228,27 +228,15 @@ export class MentionView extends ItemView {
             const workspace = this.app.workspace;
             const content = await this.app.vault.read(file);
 
-            if (workspace.getActiveFile() && workspace.getActiveFile().path !== occurence.path) {
-                workspace.getLeaf(true).openFile(file, {
-                    active: true,
-                    eState: {
-                        match: {
-                            content,
-                            matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
-                        },
+            workspace.getLeaf(workspace.getActiveFile() && workspace.getActiveFile().path !== occurence.path).openFile(file, {
+                active: true,
+                eState: {
+                    match: {
+                        content,
+                        matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
                     },
-                });
-            } else {
-                workspace.getLeaf(false).openFile(file, {
-                    active: true,
-                    eState: {
-                        match: {
-                            content,
-                            matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
-                        },
-                    },
-                });
-            }
+                },
+            });
         });
     }
 }
