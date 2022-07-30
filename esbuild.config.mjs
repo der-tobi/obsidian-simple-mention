@@ -35,7 +35,6 @@ esbuild
       "@codemirror/lint",
       "@codemirror/matchbrackets",
       "@codemirror/panel",
-      "@codemirror/rangeset",
       "@codemirror/rectangular-selection",
       "@codemirror/search",
       "@codemirror/state",
