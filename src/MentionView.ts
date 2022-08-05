@@ -146,16 +146,32 @@ export class MentionView extends ItemView {
         this.listContainer.createDiv('mention-view-item-list', (el) => {
             if (this.mentions != null) {
                 const selectedMention = this.mentions.get(this.mentionSelect);
+                let occurences: Occurence[];
 
                 if (this.select.value === 'Select all @mentions') {
-                    [...this.mentions?.values()]
-                        .flatMap((m) => m.occurences)
-                        ?.sort(this.occurenceComparer)
-                        .forEach((occurence) => {
-                            this.filterAndRenderMentions(occurence, el);
-                        });
+                    occurences = [...this.mentions?.values()].flatMap((m) => m.occurences);
+                    occurences = [
+                        ...new Map(
+                            occurences.map((occurence) => [
+                                occurence.path + ':' + occurence.line.from + ':' + occurence.line.from,
+                                occurence,
+                            ])
+                        ).values(),
+                    ];
+                    occurences?.sort(this.occurenceComparer).forEach((occurence) => {
+                        this.filterAndRenderMentions(occurence, el);
+                    });
                 } else if (selectedMention?.occurences.length > 0) {
-                    selectedMention.occurences?.sort(this.occurenceComparer).forEach((occurence) => {
+                    occurences = selectedMention.occurences;
+                    occurences = [
+                        ...new Map(
+                            occurences.map((occurence) => [
+                                occurence.path + ':' + occurence.line.from + ':' + occurence.line.from,
+                                occurence,
+                            ])
+                        ).values(),
+                    ];
+                    occurences?.sort(this.occurenceComparer).forEach((occurence) => {
                         this.filterAndRenderMentions(occurence, el);
                     });
                 }
