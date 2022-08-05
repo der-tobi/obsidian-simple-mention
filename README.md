@@ -29,6 +29,7 @@ When you click on a mention, the right side pane opens with all occurrences of t
 ![Preview Mode shortcuts](obsidian_preview_klick.gif)
 
 ## Known issues
+- There seems to be an problem with large vaults (See [Issue](https://github.com/der-tobi/obsidian-simple-mention/issues/1)).
 - We need to restart Obsidian after adjusting the trigger phrase for the changes to take effect.
 - We need to restart Obsidian after changing the name of yourself for the changes to take effect.
 - Style could currently not be overridden by a template (simple fix)
