@@ -1,8 +1,14 @@
 # Obsidian simple mention
-A simple plugin that visually highlights mentions and suggests existing ones as you write.
-The mention prefix can be customized and defaults to `@`.
-Find all occurrences of a mention in the side pane and jump to the corresponding line in the document.
+A simple plugin that visually highlights mentions and suggests existing ones as you write.   
+The mention prefix can be customized and defaults to `@`.  
+Find all occurrences of a mention in the side pane and jump to the corresponding line in the document.  
 Distinguish your personal mentions from the others by a different color.
+
+![Overview obsidian simple mention](obsidian_general.gif)
+
+Filter your mentions by a phrase
+
+![Filter your mentions](obsidian_filter.gif)
 
 ## Settings
 You can set:
@@ -15,8 +21,12 @@ You can set:
 ### In edit mode
 `ctrl+space` or `ctrl+click` on a mention, opens the right side pane with all occurrences of that mention.
 
+![Edit mode shortcuts (ctrl+space or ctrl+click)](obsidian_ctrl_space.gif)
+
 ### In preview mode
 When you click on a mention, the right side pane opens with all occurrences of that mention.
+
+![Preview Mode shortcuts](obsidian_preview_klick.gif)
 
 ## Known issues
 - We need to restart Obsidian after adjusting the trigger phrase for the changes to take effect.
