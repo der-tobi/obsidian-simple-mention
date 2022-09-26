@@ -1,29 +1,53 @@
-import { ItemView, MarkdownRenderer, TFile, WorkspaceLeaf } from 'obsidian';
+import { VirtualSelect } from 'node_modules/virtual-select-plugin/src/virtual-select';
+import { EventRef, ItemView, MarkdownRenderer, TFile, WorkspaceLeaf } from 'obsidian';
 
 import { Cache } from './Cache';
+import { IMention, IOccurence } from './CacheDb';
 import { VIEW_TYPE_MENTION } from './Constants';
-import { Mention, Occurence } from './Mention';
 import { TASK_REG_EXP } from './RegExp';
 
+require('PopoverComponent');
+require('PopperComponent');
+
+class SelectOptions {
+    label: string;
+    value: IMention;
+}
+
 export class MentionView extends ItemView {
+    // TODO (FEAT): Add indicator if indexing or updating is in progress
+    private readonly MENTION_SELECT_ID: string = 'mention-select';
+    private readonly MENTION_VIEW_SELECT_CONTAINER: string = 'mention-view-select-container';
     private viewContent: Element;
     private container: HTMLDivElement;
     private controlsContainer: HTMLDivElement;
     private listContainer: HTMLDivElement;
-    private mentionSelect: string = '';
-    private select: HTMLSelectElement;
+    private mentionSelectValue: string = '';
     private simpleFilterInput: HTMLInputElement;
     private includeCompletedCheckbox: HTMLDivElement;
     private includeCompletedLabel: HTMLDivElement;
     private includeCompleted: boolean = false;
-    private options: HTMLOptionElement[] = [];
-    private readonly mentions: Map<string, Mention>;
+    private onActiveLeafChangeEventRef: EventRef;
+    private occurences: IOccurence[] = [];
+    private get mentionSelectElement(): any {
+        return document.querySelector(`#${this.MENTION_SELECT_ID}`);
+    }
 
     constructor(leaf: WorkspaceLeaf, private readonly cache: Cache) {
         super(leaf);
-        this.mentions = cache.mentions;
-        this.cache.loadVault();
+
         this.initRender();
+
+        // Rendering the selection after the placeholder has been rendered if the view did not have the focus yet
+        this.onActiveLeafChangeEventRef = this.app.workspace.on('active-leaf-change', (leaf) => {
+            if (leaf.view instanceof MentionView) {
+                this.renderMentionSelect();
+            }
+        });
+
+        this.onunload = () => {
+            this.app.workspace.offref(this.onActiveLeafChangeEventRef);
+        };
     }
 
     public getViewType(): string {
@@ -37,30 +61,22 @@ export class MentionView extends ItemView {
     public getIcon(): string {
         return 'at';
     }
-    public updateView(): void {
-        this.renderOptions();
-        this.renderList();
-    }
 
-    public selectMentionByKey(key: string): void {
-        const option = this.options.find((o) => o.value === key);
-
-        if (option != null) {
-            option.selected = true;
-            this.mentionSelect = option.value;
-            this.renderList();
+    public updateList(mention: IMention, path: string): void {
+        if (this.mentionSelectValue === mention.name || this.occurences.map((o) => o.path).includes(path)) {
+            this.renderOccurencesList();
         }
-
-        this.app.workspace.revealLeaf(this.leaf);
     }
 
-    private initRender(): void {
+    public async selectMentionByKey(key: string): Promise<void> {
+        this.app.workspace.revealLeaf(this.leaf);
+        await this.renderMentionSelect();
+        this.mentionSelectElement.setValue(key);
+    }
+
+    private async initRender(): Promise<void> {
         this.renderContainers();
-        this.renderSelect();
-        this.renderSimpleFilter();
-        this.renderIncludeComplededTasksCheckbox();
-        this.renderOptions();
-        this.renderList();
+        this.renderControlls();
     }
 
     private renderContainers(): void {
@@ -71,18 +87,16 @@ export class MentionView extends ItemView {
         this.listContainer = this.container.createDiv('mention-view-list-container');
     }
 
-    private renderSelect(): void {
+    private renderControlls() {
         this.controlsContainer.empty();
-        this.controlsContainer.createDiv('mention-view-select', (el) => {
-            this.select = document.createElement('select') as HTMLSelectElement;
-            this.select.addClass('dropdown');
+        this.renderSelectContainer();
+        this.renderSimpleFilter();
+        this.renderIncludeComplededTasksCheckbox();
+    }
 
-            this.select.addEventListener('change', (ev) => {
-                this.mentionSelect = (ev.target as HTMLSelectElement).value;
-                this.renderList();
-            });
-
-            el.appendChild(this.select);
+    private renderSelectContainer(): void {
+        this.controlsContainer.createDiv(this.MENTION_VIEW_SELECT_CONTAINER, (el) => {
+            el.id = this.MENTION_VIEW_SELECT_CONTAINER;
         });
     }
 
@@ -94,7 +108,7 @@ export class MentionView extends ItemView {
             this.simpleFilterInput.placeholder = 'Filter...';
 
             this.simpleFilterInput.addEventListener('keyup', (ev) => {
-                this.renderList();
+                this.renderOccurencesList();
             });
 
             el.appendChild(this.simpleFilterInput);
@@ -111,78 +125,39 @@ export class MentionView extends ItemView {
             this.includeCompletedCheckbox.addEventListener('click', (e) => {
                 this.includeCompleted = !this.includeCompleted;
                 this.includeCompletedCheckbox.toggleClass('is-enabled', this.includeCompleted);
-                this.renderList();
+                this.renderOccurencesList();
             });
             el.appendChild(this.includeCompletedLabel);
             el.appendChild(this.includeCompletedCheckbox);
         });
     }
 
-    private renderOptions(): void {
-        this.select.empty();
-        this.options = [];
-
-        const emptyOption = document.createElement('option');
-        emptyOption.value = 'Select all @mentions';
-        emptyOption.text = 'Select all @mentions';
-        emptyOption.selected = this.mentionSelect == 'Select all @mentions';
-        this.options.push(emptyOption);
-        this.select.appendChild(emptyOption);
-
-        const keys = [...this.mentions.keys()];
-        keys.sort(this.mentionLabelComparer).forEach((key) => {
-            const value = this.mentions.get(key);
-            const option = document.createElement('option');
-            option.value = key;
-            option.text = value.name;
-            option.selected = this.mentionSelect == key;
-            this.options.push(option);
-            this.select.appendChild(option);
-        });
-    }
-
-    private renderList(): void {
+    private renderOccurencesList(): void {
         this.listContainer.empty();
-        this.listContainer.createDiv('mention-view-item-list', (el) => {
-            if (this.mentions != null) {
-                const selectedMention = this.mentions.get(this.mentionSelect);
-                let occurences: Occurence[];
+        this.listContainer.createDiv('mention-view-item-list', async (el) => {
+            this.occurences = await this.cache.getOccurencesByMention(this.mentionSelectValue);
 
-                if (this.select.value === 'Select all @mentions') {
-                    occurences = [...this.mentions?.values()].flatMap((m) => m.occurences);
-                    occurences = [
-                        ...new Map(
-                            occurences.map((occurence) => [
-                                occurence.path + ':' + occurence.line.from + ':' + occurence.line.from,
-                                occurence,
-                            ])
-                        ).values(),
-                    ];
-                    occurences?.sort(this.occurenceComparer).forEach((occurence) => {
-                        this.filterAndRenderMentions(occurence, el);
-                    });
-                } else if (selectedMention?.occurences.length > 0) {
-                    occurences = selectedMention.occurences;
-                    occurences = [
-                        ...new Map(
-                            occurences.map((occurence) => [
-                                occurence.path + ':' + occurence.line.from + ':' + occurence.line.from,
-                                occurence,
-                            ])
-                        ).values(),
-                    ];
-                    occurences?.sort(this.occurenceComparer).forEach((occurence) => {
-                        this.filterAndRenderMentions(occurence, el);
-                    });
-                }
+            if (this.occurences.length > 0) {
+                this.occurences = [
+                    ...new Map(
+                        this.occurences.map((occurence) => [occurence.path + ':' + occurence.lineFrom + ':' + occurence.lineTo, occurence])
+                    ).values(),
+                ];
+                this.occurences?.sort(this.occurenceComparer).forEach((occurence) => {
+                    this.filterAndRenderMentions(occurence, el);
+                });
+            }
+
+            if (this.occurences.length === 0 && this.mentionSelectValue != '') {
+                el.createDiv('mention-view-item-list-empty', (el) => {
+                    el.innerText = 'No occurences to show';
+                });
             }
         });
     }
 
-    private filterAndRenderMentions(occurence: Occurence, el: HTMLDivElement): void {
-        if (!this.includeCompleted && occurence.isTaskComplete) {
-            return;
-        }
+    private filterAndRenderMentions(occurence: IOccurence, el: HTMLDivElement): void {
+        if (!this.includeCompleted && occurence.isTaskComplete) return;
 
         if (
             this.simpleFilterInput.value == null ||
@@ -193,7 +168,7 @@ export class MentionView extends ItemView {
         }
     }
 
-    private renderOccurence(container: HTMLDivElement, occurence: Occurence): void {
+    private renderOccurence(container: HTMLDivElement, occurence: IOccurence): void {
         container.createDiv('mention-view-item', (el) => {
             MarkdownRenderer.renderMarkdown(occurence.text.trimStart(), el, occurence.path, this);
             this.registerTodoCheckboxClick(el, occurence);
@@ -204,26 +179,7 @@ export class MentionView extends ItemView {
         });
     }
 
-    private occurenceComparer(a: Occurence, b: Occurence): number {
-        if (a.path === b.path) {
-            return a.line.number - b.line.number;
-        }
-        return a.path > b.path ? 1 : -1;
-    }
-
-    private mentionLabelComparer(a: string, b: string): number {
-        if (a.toLowerCase() < b.toLowerCase()) {
-            return -1;
-        }
-
-        if (a.toLowerCase() > b.toLowerCase()) {
-            return 1;
-        }
-
-        return 0;
-    }
-
-    private registerTodoCheckboxClick(el: Element, occurence: Occurence): void {
+    private registerTodoCheckboxClick(el: Element, occurence: IOccurence): void {
         el.getElementsByTagName('input')[0]?.addEventListener('input', async (e) => {
             const separator = '\n';
             const checked = (e.target as HTMLInputElement).checked;
@@ -231,28 +187,91 @@ export class MentionView extends ItemView {
             const fileContents = await this.app.vault.read(file);
             const fileLines = fileContents.split(separator);
 
-            fileLines[occurence.line.number - 1] = fileLines[occurence.line.number - 1].replace(TASK_REG_EXP, `${checked ? '[x]' : '[ ]'}`);
+            fileLines[occurence.lineNumber - 1] = fileLines[occurence.lineNumber - 1].replace(TASK_REG_EXP, `${checked ? '[x]' : '[ ]'}`);
             this.app.vault.modify(file, fileLines.join(separator));
 
             e.stopPropagation();
         });
     }
 
-    private registerItemClick(el: HTMLDivElement, occurence: Occurence): void {
+    private registerItemClick(el: HTMLDivElement, occurence: IOccurence): void {
         el.onClickEvent(async (_) => {
             const file = this.app.vault.getAbstractFileByPath(occurence.path) as TFile;
             const workspace = this.app.workspace;
             const content = await this.app.vault.read(file);
 
+            // TODO (IMPROVEMENT): If the file is already opened in a View, then don't open a new one
             workspace.getLeaf(workspace.getActiveFile() && workspace.getActiveFile().path !== occurence.path).openFile(file, {
                 active: true,
                 eState: {
                     match: {
                         content,
-                        matches: [[occurence.line.from + occurence.startOccurence, occurence.line.from + occurence.endOccurence]],
+                        matches: [[occurence.lineFrom + occurence.startOccurence, occurence.lineFrom + occurence.endOccurence]],
                     },
                 },
             });
         });
+    }
+
+    private async renderMentionSelect() {
+        if (document.getElementById(this.MENTION_SELECT_ID) != null) return;
+
+        this.addMentionSelectElement();
+
+        VirtualSelect.init({
+            ele: `#${this.MENTION_SELECT_ID}`,
+            options: await this.getMentionSelectOptions(),
+            search: true,
+            markSearchResults: true,
+        });
+
+        this.mentionSelectElement.addEventListener('beforeOpen', async () => await this.handleMentionSelectBeforeOpen());
+        this.mentionSelectElement.addEventListener('change', () => this.handleMentionSelectChange());
+    }
+
+    private addMentionSelectElement(): void {
+        const container = document.getElementById(this.MENTION_VIEW_SELECT_CONTAINER);
+        const placeholder = container.createDiv();
+        placeholder.id = this.MENTION_SELECT_ID;
+        container.appendChild(placeholder);
+    }
+
+    private async getMentionSelectOptions() {
+        const mentions = await this.cache.getAllMentions();
+
+        return mentions
+            .map((m) => {
+                return { label: m, value: m } as unknown as SelectOptions;
+            })
+            .sort(this.mentionLabelComparer);
+    }
+
+    private async handleMentionSelectBeforeOpen() {
+        this.mentionSelectElement.setOptions(await this.getMentionSelectOptions(), true);
+    }
+
+    private handleMentionSelectChange(): void {
+        const value = this.mentionSelectElement.value;
+        this.mentionSelectValue = value != null ? value : '';
+        this.renderOccurencesList();
+    }
+
+    private occurenceComparer(a: IOccurence, b: IOccurence): number {
+        if (a.path === b.path) {
+            return a.lineNumber - b.lineNumber;
+        }
+        return a.path > b.path ? 1 : -1;
+    }
+
+    private mentionLabelComparer(a: SelectOptions, b: SelectOptions): number {
+        if (a.label.toLowerCase() < b.label.toLowerCase()) {
+            return -1;
+        }
+
+        if (a.label.toLowerCase() > b.label.toLowerCase()) {
+            return 1;
+        }
+
+        return 0;
     }
 }

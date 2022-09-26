@@ -55,3 +55,10 @@ esbuild
     outfile: "main.js",
   })
   .catch(() => process.exit(1));
+
+
+esbuild.buildSync({
+  entryPoints: ['./src/custom.css'],
+  bundle: true,
+  outfile: 'styles.css',
+})

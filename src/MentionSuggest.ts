@@ -54,8 +54,8 @@ export class MentionSuggest extends EditorSuggest<Completition> {
         return result;
     }
 
-    public getSuggestions(context: EditorSuggestContext): Completition[] | Promise<Completition[]> {
-        const suggestions = this.getMentionSuggestions(context);
+    public async getSuggestions(context: EditorSuggestContext): Promise<Completition[]> {
+        const suggestions = await this.getMentionSuggestions(context);
         if (suggestions.length) {
             return suggestions.sort(this.completitionComparer);
         }
@@ -69,13 +69,9 @@ export class MentionSuggest extends EditorSuggest<Completition> {
 
     public selectSuggestion(value: Completition, evt: MouseEvent | KeyboardEvent): void {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        const currenCursorPos = activeView.editor.getCursor();
         const replacementValue = value.value + ' ';
-        const newCursorPos = { ch: currenCursorPos.ch + replacementValue.length, line: currenCursorPos.line };
 
-        if (!activeView) {
-            return;
-        }
+        if (!activeView) return;
 
         activeView.editor.replaceRange(
             replacementValue,
@@ -86,15 +82,19 @@ export class MentionSuggest extends EditorSuggest<Completition> {
             this.context.end
         );
 
-        activeView.editor.setCursor(newCursorPos);
+        activeView.editor.setCursor({
+            ch: this.context.start.ch + this.settings.mentionTriggerPhrase.length + replacementValue.length,
+            line: this.context.start.line,
+        });
     }
 
-    private getMentionSuggestions(context: EditorSuggestContext): Completition[] {
+    private async getMentionSuggestions(context: EditorSuggestContext): Promise<Completition[]> {
         const result: string[] = [];
 
-        for (let key of this.cache.mentions.keys()) {
-            if (key.toLocaleLowerCase().contains(context.query.toLocaleLowerCase())) {
-                result.push(this.cache.mentions.get(key).name);
+        for (let mention of await this.cache.getAllMentions()) {
+            // for (let key of this.cache.mentions.keys()) {
+            if (mention.toLocaleLowerCase().contains(context.query.toLocaleLowerCase())) {
+                result.push(mention);
             }
         }
 
