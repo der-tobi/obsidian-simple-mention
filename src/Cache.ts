@@ -136,6 +136,16 @@ export class Cache {
         const doc = Text.of(fileLines);
         const path = file.path;
 
+        if (this.settings.ignoredDirectories) {
+            for (let ignoredDirectory of this.settings.ignoredDirectories.split(
+                ",",
+            )) {
+                if (path.includes(ignoredDirectory.trim())) {
+                    return;
+                }
+            }
+        }
+
         this.removeCurrentPathFromAllMentions(path);
 
         fileLines.forEach((lineContent, lineIndex) => {
