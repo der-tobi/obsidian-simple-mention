@@ -136,6 +136,10 @@ export class Cache {
         const doc = Text.of(fileLines);
         const path = file.path;
 
+        if (!path.toLowerCase().endsWith(".md")) {
+            return;
+        }
+
         if (this.settings.ignoredDirectories) {
             for (let ignoredDirectory of this.settings.ignoredDirectories.split(
                 ",",
