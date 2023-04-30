@@ -7,6 +7,7 @@ export interface MentionSettings {
     mentionStyleColor: string;
     meMentionName: string;
     meMentionStyleColor: string;
+    ignoredDirectories: string;
 }
 
 export const DEFAULT_SETTINGS: MentionSettings = {
@@ -14,7 +15,23 @@ export const DEFAULT_SETTINGS: MentionSettings = {
     mentionStyleColor: 'green',
     meMentionName: 'Me',
     meMentionStyleColor: 'deeppink',
+    ignoredDirectories: '',
 };
+
+export function normalizeIgnoredPaths(settings: MentionSettings) {
+    const directories = settings.ignoredDirectories.split(',');
+
+    directories.forEach((d, i) => {
+        d = d.trim();
+
+        if (!d.endsWith('/') && d != '') {
+            d = d + '/ ';
+        }
+        directories[i] = d;
+    });
+
+    settings.ignoredDirectories = directories.join(',');
+}
 
 export class MentionSettingsTab extends PluginSettingTab {
     constructor(app: App, private plugin: MentionPlugin) {
@@ -83,6 +100,21 @@ export class MentionSettingsTab extends PluginSettingTab {
 
                     if (value === '') {
                         this.plugin.settings.meMentionStyleColor = DEFAULT_SETTINGS.meMentionStyleColor;
+                    }
+
+                    this.plugin.saveSettings();
+                });
+            });
+
+        new Setting(containerEl)
+            .setName('Ignored directories')
+            .setDesc('List of directories to ignore (separated by comma). Please reload Obsidian after changing this value.')
+            .addText((text) => {
+                text.setValue(this.plugin.settings.ignoredDirectories).onChange((value) => {
+                    this.plugin.settings.ignoredDirectories = value;
+
+                    if (value === '') {
+                        this.plugin.settings.ignoredDirectories = DEFAULT_SETTINGS.ignoredDirectories;
                     }
 
                     this.plugin.saveSettings();

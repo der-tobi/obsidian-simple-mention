@@ -12,6 +12,7 @@ class IndexableFile {
     fileContent: string;
     hash: number;
     reIndexNecessary: boolean;
+    isIgnored: boolean;
 }
 // Worker Options: https://github.com/blacksmithgu/obsidian-dataview/blob/fea74c37ea981063062a386ede3d5290ef572f26/src/data-import/web-worker/import-manager.ts
 // For future improvments see also: https://github.com/blacksmithgu/obsidian-dataview/blob/b2f71814fdb47bdb3a104c7d5a9bbede9c116426/src/data-index/index.ts
@@ -96,21 +97,19 @@ export class Cache {
 
     private async loadVault(): Promise<void> {
         return this.mutex.runExclusive(async () => {
-            const getIndexableFiles = this.vault.getMarkdownFiles().map((file: TFile) => {
-                return this.getIndexableFile(file);
-            });
-
-            const indexableFiles = await Promise.all(getIndexableFiles);
-            const filesForReindexing = indexableFiles.filter((file) => file.reIndexNecessary);
-
+            const indexableFiles = await Promise.all(this.vault.getMarkdownFiles().map((file: TFile) => this.getIndexableFile(file)));
+            const indexableFilesWithoutIgnored = indexableFiles.filter((file) => !file.isIgnored);
+            const filesWithoutIgnoredForReindexing = indexableFilesWithoutIgnored.filter((file) => file.reIndexNecessary);
             const notice = new Notice('Simple Mention:\n', 3600000);
-            for (let i = 0; i < filesForReindexing.length; i++) {
-                await this.indexFile(filesForReindexing[i]);
-                notice.setMessage('Simple Mention:\nIndexing mention ' + (i + 1) + '/' + filesForReindexing.length);
+
+            for (let i = 0; i < filesWithoutIgnoredForReindexing.length; i++) {
+                await this.indexFile(filesWithoutIgnoredForReindexing[i]);
+                notice.setMessage('Simple Mention:\nIndexing mention ' + (i + 1) + '/' + filesWithoutIgnoredForReindexing.length);
+                // TODO (FEAT): Could we add an abort action here?
             }
 
             notice.setMessage('Simple Mention:\nCleaning');
-            await this.cleanUpFileHashes(indexableFiles);
+            await this.cleanUpFileHashes(indexableFilesWithoutIgnored);
             await this.cleanUpWithFileHashes();
             notice.hide();
 
@@ -138,11 +137,16 @@ export class Cache {
     }
 
     private async getIndexableFile(file: TFile): Promise<IndexableFile> {
+        if (this.isInIgnoredDirectory(file)) return { file, hash: null, fileContent: null, reIndexNecessary: false, isIgnored: true };
+
         const cachedPageCacheItem = await this.db.fileHashes.get(file.path);
-        if (file.stat.mtime === cachedPageCacheItem?.mtime) return { file, hash: null, fileContent: null, reIndexNecessary: false };
+        if (file.stat.mtime === cachedPageCacheItem?.mtime)
+            return { file, hash: null, fileContent: null, reIndexNecessary: false, isIgnored: false };
 
         const indexableFile = await this.getIndexableFileBase(file);
-        if (cachedPageCacheItem != null && cachedPageCacheItem.hash === indexableFile.hash) {
+        (indexableFile as IndexableFile).isIgnored = false;
+
+        if (cachedPageCacheItem?.hash === indexableFile.hash) {
             (indexableFile as IndexableFile).reIndexNecessary = false;
             return indexableFile as IndexableFile;
         }
@@ -151,7 +155,7 @@ export class Cache {
         return indexableFile as IndexableFile;
     }
 
-    private async getIndexableFileBase(file: TFile): Promise<Omit<IndexableFile, 'reIndexNecessary'>> {
+    private async getIndexableFileBase(file: TFile): Promise<Omit<IndexableFile, 'reIndexNecessary' | 'isIgnored'>> {
         const fileContent = await this.vault.read(file);
         const hash = cyrb53Hash(fileContent);
 
@@ -171,6 +175,14 @@ export class Cache {
         const matchedMentions: Set<IMention> = new Set();
 
         await this.removeOccurencesOfPath(path);
+
+        // if the directory is ignored, then there is no need to read further
+        if (this.settings.ignoredDirectories && this.isInIgnoredDirectory(indexableFile.file)) {
+            return this.db.fileHashes.put(
+                { path: indexableFile.file.path, hash: indexableFile.hash, mtime: indexableFile.file.stat.mtime },
+                indexableFile.file.path
+            );
+        }
 
         // if the file does not contain a mention, then there is no need to read it further
         if (!indexableFile.fileContent.contains(this.settings.mentionTriggerPhrase)) {
@@ -268,10 +280,10 @@ export class Cache {
     }
 
     private async fileCreateHandler(file: TAbstractFile): Promise<void> {
-        if (!(file instanceof TFile) || !file.name.endsWith('.md') || file.extension != 'md') return;
+        if (this.isFileNotRelevantForCache(file)) return;
 
         this.mutex.runExclusive(async () => {
-            const indexableFile = await this.getIndexableFile(file);
+            const indexableFile = await this.getIndexableFile(file as TFile);
             if (!indexableFile.reIndexNecessary) return;
 
             await this.indexFile(indexableFile);
@@ -279,7 +291,7 @@ export class Cache {
     }
 
     private fileDeleteHandler(file: TAbstractFile): void {
-        if (!(file instanceof TFile) || !file.name.toLowerCase().endsWith('.md') || file.extension != 'md') return;
+        if (this.isFileNotRelevantForCache(file)) return;
 
         this.mutex.runExclusive(async () => {
             const affectedMentions = await this.getAffectedMentionsOfPath(file.path);
@@ -293,7 +305,7 @@ export class Cache {
     }
 
     private fileRenameHandler(file: TAbstractFile, oldPath: string): void {
-        if (!(file instanceof TFile) || !file.name.endsWith('.md') || file.extension != 'md') return;
+        if (this.isFileNotRelevantForCache(file)) return;
 
         this.mutex.runExclusive(async () => {
             const affectedMentions = await this.getAffectedMentionsOfPath(oldPath);
@@ -303,11 +315,16 @@ export class Cache {
 
             affectedMentions.forEach((m) => this.notifyOccurencesChangeSubscribers(m, file.path));
 
-            const indexableFile = await this.getIndexableFile(file);
-            this.db.fileHashes.put(
-                { path: indexableFile.file.path, hash: indexableFile.hash, mtime: indexableFile.file.stat.mtime },
-                indexableFile.file.path
-            );
+            const indexableFile = await this.getIndexableFile(file as TFile);
+
+            if (indexableFile.reIndexNecessary) {
+                await this.indexFile(indexableFile);
+            } else {
+                this.db.fileHashes.put(
+                    { path: indexableFile.file.path, hash: indexableFile.hash, mtime: indexableFile.file.stat.mtime },
+                    indexableFile.file.path
+                );
+            }
         });
     }
 
@@ -347,6 +364,14 @@ export class Cache {
         }
     }
 
+    private isFileNotRelevantForCache(file: TAbstractFile): boolean {
+        if (!(file instanceof TFile) || !file.name.toLowerCase().endsWith('.md') || file.extension != 'md') {
+            return true;
+        }
+
+        return false;
+    }
+
     private async getAffectedMentionsOfPath(path: string): Promise<IMention[]> {
         const affectedOccurences = await this.db.occurences.where('path').equals(path).toArray();
         const distinctMentionNames = affectedOccurences
@@ -356,8 +381,8 @@ export class Cache {
         return this.db.mentions.bulkGet(distinctMentionNames);
     }
 
-    private async cleanUpFileHashes(currentFilesInTheVault: IndexableFile[]): Promise<number> {
-        const currentPaths = currentFilesInTheVault.map((file) => file.file.path);
+    private async cleanUpFileHashes(currentRelevantFilesInTheVault: IndexableFile[]): Promise<number> {
+        const currentPaths = currentRelevantFilesInTheVault.map((file) => file.file.path);
         const pathsOfCachedFiles = (await this.db.fileHashes.orderBy('path').uniqueKeys()) as string[];
         const removedFiles = pathsOfCachedFiles.filter((cachedPath) => !currentPaths.includes(cachedPath));
         return this.db.fileHashes.where('path').anyOf(removedFiles).delete();
@@ -374,5 +399,18 @@ export class Cache {
         const cachedMentions = (await this.db.mentions.toArray()).filter((m) => !m.isMe).map((m) => m.name);
         const mentionsToDelete = cachedMentions.filter((m) => !currentMentions.includes(m));
         return this.db.mentions.bulkDelete(mentionsToDelete);
+    }
+
+    private isInIgnoredDirectory(file: TFile): boolean {
+        for (let ignoredDirectory of this.settings.ignoredDirectories.split(',')) {
+            if (this.isDirectoryInPath(ignoredDirectory, file.path)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private isDirectoryInPath(directory: string, path: string): boolean {
+        return directory.trim() != '' && path.startsWith(directory.trim());
     }
 }

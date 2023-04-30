@@ -8,7 +8,7 @@ import { MentionPostProcessor as MentionPostProcessor } from './MentionPostProce
 import { MentionSuggest } from './MentionSuggest';
 import { MentionView } from './MentionView';
 import { getMeMentionOrMentionRegex } from './RegExp';
-import { DEFAULT_SETTINGS, MentionSettings, MentionSettingsTab } from './Settings';
+import { DEFAULT_SETTINGS, MentionSettings, MentionSettingsTab, normalizeIgnoredPaths } from './Settings';
 import { Style } from './Style';
 
 const x = require('electron');
@@ -21,6 +21,9 @@ export default class MentionPlugin extends Plugin {
 
     public async onload() {
         await this.loadSettings();
+
+        // Make sure, that every directory ends with /
+        normalizeIgnoredPaths(this.settings);
 
         this.addAtIcon();
         this.addStyle();
@@ -101,6 +104,7 @@ export default class MentionPlugin extends Plugin {
     public async saveSettings() {
         // TODO (IMPROVEMENT): Properly reload MarkdownPreviewProcessor and the CM-Extension. How?
         await this.saveData(this.settings);
+        normalizeIgnoredPaths(this.settings);
         this.style.updateStyle();
     }
 
