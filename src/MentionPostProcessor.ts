@@ -2,13 +2,13 @@ import { CLASS_ME_MENTION, CLASS_MENTION } from './Constants';
 import { getMeMentionOrMentionRegex } from './RegExp';
 import { MentionSettings } from './Settings';
 
-export class PreviewStyle {
+export class MentionPostProcessor {
     private subscribers: ((text: string) => void)[] = [];
     private meMentionOrMentionRegex: RegExp = undefined;
 
     constructor(private element: HTMLElement, private settings: MentionSettings) {
         // It is OK to set this regular expression here. As for now, the updates of the settings is not supported
-        // TODO: Add a function to update a new RegExp after setting a new TriggerPhrase / new MeMentionName
+        // TODO (IMPROVEMENT): Add a function to update a new RegExp after setting a new TriggerPhrase / new MeMentionName
         this.meMentionOrMentionRegex = getMeMentionOrMentionRegex(this.settings.mentionTriggerPhrase, this.settings.meMentionName);
     }
 

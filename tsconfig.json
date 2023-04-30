@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "paths": {
+      "PopoverComponent": ["node_modules/popover-plugin/src/popover.js"],
+      "PopperComponent": ["node_modules/popper-plugin/src/popper.js"],
+    },
     "baseUrl": ".",
     "inlineSourceMap": true,
     "inlineSources": true,
@@ -17,6 +21,7 @@
     ]
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "decl.d.ts",
   ]
 }

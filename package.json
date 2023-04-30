@@ -25,12 +25,16 @@
 		"@typescript-eslint/eslint-plugin": "^5.30.7",
 		"@typescript-eslint/parser": "^5.30.7",
 		"builtin-modules": "^3.3.0",
-		"esbuild": "0.14.49",
+		"esbuild": "^0.15.6",
 		"obsidian": "^0.15.4",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
-		"async-mutex": "^0.3.2"
+		"async-mutex": "^0.3.2",
+		"dexie": "^3.2.2",
+		"popover-plugin": "^1.0.10",
+		"popper-plugin": "^1.0.4",
+		"virtual-select-plugin": "^1.0.31"
 	}
 }

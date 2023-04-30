@@ -4,12 +4,14 @@ import { Cache } from './Cache';
 import { getCmDecorationExtension } from './CmDecorationExtension';
 import { VIEW_TYPE_MENTION } from './Constants';
 import { getAtIcon } from './Icon';
+import { MentionPostProcessor as MentionPostProcessor } from './MentionPostProcessor';
 import { MentionSuggest } from './MentionSuggest';
 import { MentionView } from './MentionView';
-import { PreviewStyle } from './PreviewStyle';
 import { getMeMentionOrMentionRegex } from './RegExp';
-import { DEFAULT_SETTINGS, MentionSettings, MentionSettingsTab } from './Settings';
+import { DEFAULT_SETTINGS, MentionSettings, MentionSettingsTab, normalizeIgnoredPaths } from './Settings';
 import { Style } from './Style';
+
+const x = require('electron');
 
 export default class MentionPlugin extends Plugin {
     private cache: Cache | undefined;
@@ -20,6 +22,9 @@ export default class MentionPlugin extends Plugin {
     public async onload() {
         await this.loadSettings();
 
+        // Make sure, that every directory ends with /
+        normalizeIgnoredPaths(this.settings);
+
         this.addAtIcon();
         this.addStyle();
 
@@ -27,17 +32,33 @@ export default class MentionPlugin extends Plugin {
 
         this.registerView(VIEW_TYPE_MENTION, (leaf: WorkspaceLeaf) => {
             const mentionView = new MentionView(leaf, this.cache);
-            this.cache.subscribe(mentionView.updateView.bind(mentionView));
+            this.cache.subscribeToOccurencesChanges(mentionView.updateList.bind(mentionView));
 
             return mentionView;
         });
 
-        this.initMentionView();
+        if (!this.app.workspace.layoutReady) {
+            this.app.workspace.onLayoutReady(async () => {
+                try {
+                    this.cache.init();
+                } catch (e) {
+                    console.error(e);
+                }
+                this.initMentionView();
+            });
+        } else {
+            try {
+                this.cache.init();
+            } catch (e) {
+                console.error(e);
+            }
+            this.initMentionView();
+        }
 
         this.registerMarkdownPostProcessor((element: HTMLElement) => {
-            const previewStyler = new PreviewStyle(element, this.settings);
-            previewStyler.addPreviewMentionStyle();
-            previewStyler.subscribeToMentionClick(this.previewClickHandler.bind(this));
+            const mentionPostProcessor = new MentionPostProcessor(element, this.settings);
+            mentionPostProcessor.addPreviewMentionStyle();
+            mentionPostProcessor.subscribeToMentionClick(this.previewClickHandler.bind(this));
         });
 
         this.registerEditorExtension(
@@ -57,23 +78,23 @@ export default class MentionPlugin extends Plugin {
     }
 
     public initMentionView() {
-        this.app.workspace.onLayoutReady(() => {
-            if (this.app.workspace.getLeavesOfType(VIEW_TYPE_MENTION).length) {
-                return;
-            }
-            this.app.workspace.getRightLeaf(false).setViewState({
-                type: VIEW_TYPE_MENTION,
-            });
+        if (this.app.workspace.getLeavesOfType(VIEW_TYPE_MENTION).length) return;
+
+        this.app.workspace.getRightLeaf(false).setViewState({
+            type: VIEW_TYPE_MENTION,
         });
     }
 
     public onunload(): void {
         this.cache.unsubscribeAll();
+        this.cache.unload();
+        // TODO (IMPROVEMENT): Remove classes from opened editor view or close all views
 
         if (this.style != null) {
             this.style.removeStyle();
         }
-        this.app.workspace.getLeavesOfType(VIEW_TYPE_MENTION).forEach((leaf) => leaf.detach());
+        this.app.workspace.getLeavesOfType;
+        this.app.workspace.detachLeavesOfType(VIEW_TYPE_MENTION);
     }
 
     public async loadSettings() {
@@ -81,8 +102,9 @@ export default class MentionPlugin extends Plugin {
     }
 
     public async saveSettings() {
-        // TODO: Properly reload MarkdownPreviewProcessor and the CM-Extension. How?
+        // TODO (IMPROVEMENT): Properly reload MarkdownPreviewProcessor and the CM-Extension. How?
         await this.saveData(this.settings);
+        normalizeIgnoredPaths(this.settings);
         this.style.updateStyle();
     }
 
@@ -98,14 +120,13 @@ export default class MentionPlugin extends Plugin {
 
     private async previewClickHandler(text: string) {
         await this.activateMentionView();
-
+        // TODO (FIX): If we unload and reload the Plugin, the postprocessor is not initialized, so click on a mention throws an error. Reload Editors?
         this.app.workspace.getActiveViewOfType(MentionView).selectMentionByKey(text.replace(this.settings.mentionTriggerPhrase, ''));
     }
 
     private async searchForMention(lineNumber: number, posOnLine: number, path: string) {
         await this.activateMentionView();
-
-        this.app.workspace.getActiveViewOfType(MentionView).selectMentionByKey(this.cache.getMentionAt(path, lineNumber, posOnLine)?.name);
+        this.app.workspace.getActiveViewOfType(MentionView).selectMentionByKey(await this.cache.getMentionAt(path, lineNumber, posOnLine));
     }
 
     async activateMentionView() {

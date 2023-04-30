@@ -51,6 +51,15 @@ export class Style {
                 margin-bottom: 10px;
             }
 
+            .mention-view-item-list-empty {
+                border-top: 1px solid;
+                position: relative;
+                white-space: pre-wrap;
+                color: var(--text-normal);
+                padding: 3px 9px;
+                filter: brightness(0.5);
+            }
+
             .mention-view-item ul {
                 margin-block-start: 0px;
                 margin-block-end: 0px;

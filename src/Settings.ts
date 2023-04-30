@@ -18,6 +18,21 @@ export const DEFAULT_SETTINGS: MentionSettings = {
     ignoredDirectories: '',
 };
 
+export function normalizeIgnoredPaths(settings: MentionSettings) {
+    const directories = settings.ignoredDirectories.split(',');
+
+    directories.forEach((d, i) => {
+        d = d.trim();
+
+        if (!d.endsWith('/') && d != '') {
+            d = d + '/ ';
+        }
+        directories[i] = d;
+    });
+
+    settings.ignoredDirectories = directories.join(',');
+}
+
 export class MentionSettingsTab extends PluginSettingTab {
     constructor(app: App, private plugin: MentionPlugin) {
         super(app, plugin);
@@ -92,18 +107,18 @@ export class MentionSettingsTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-        .setName('Ignored directories')
-        .setDesc('List of directories to ignore (separated by comma). Please reload Obsidian after changing this value.')
-        .addText((text) => {
-            text.setValue(this.plugin.settings.ignoredDirectories).onChange((value) => {
-                this.plugin.settings.ignoredDirectories = value;
+            .setName('Ignored directories')
+            .setDesc('List of directories to ignore (separated by comma). Please reload Obsidian after changing this value.')
+            .addText((text) => {
+                text.setValue(this.plugin.settings.ignoredDirectories).onChange((value) => {
+                    this.plugin.settings.ignoredDirectories = value;
 
-                if (value === '') {
-                    this.plugin.settings.ignoredDirectories = DEFAULT_SETTINGS.ignoredDirectories;
-                }
+                    if (value === '') {
+                        this.plugin.settings.ignoredDirectories = DEFAULT_SETTINGS.ignoredDirectories;
+                    }
 
-                this.plugin.saveSettings();
+                    this.plugin.saveSettings();
+                });
             });
-        });
     }
 }
