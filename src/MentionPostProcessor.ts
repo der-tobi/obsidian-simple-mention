@@ -1,4 +1,7 @@
+import { MarkdownPostProcessorContext } from 'obsidian';
+
 import { CLASS_ME_MENTION, CLASS_MENTION } from './Constants';
+import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
 import { getMeMentionOrMentionRegex } from './RegExp';
 import { MentionSettings } from './Settings';
 
@@ -6,7 +9,7 @@ export class MentionPostProcessor {
     private subscribers: ((text: string) => void)[] = [];
     private meMentionOrMentionRegex: RegExp = undefined;
 
-    constructor(private element: HTMLElement, private settings: MentionSettings) {
+    constructor(private element: HTMLElement, private settings: MentionSettings, private ctx: MarkdownPostProcessorContext) {
         // It is OK to set this regular expression here. As for now, the updates of the settings is not supported
         // TODO (IMPROVEMENT): Add a function to update a new RegExp after setting a new TriggerPhrase / new MeMentionName
         this.meMentionOrMentionRegex = getMeMentionOrMentionRegex(this.settings.mentionTriggerPhrase, this.settings.meMentionName);
@@ -17,6 +20,8 @@ export class MentionPostProcessor {
     }
 
     public addPreviewMentionStyle(): void {
+        if (isFilePathInIgnoredDirectories(this.ctx.sourcePath, this.settings)) return;
+
         if (this.element.firstChild instanceof Node) {
             const nodes = this.getChildNodes(this.element);
 

@@ -1,4 +1,4 @@
-import { addIcon, Plugin, WorkspaceLeaf } from 'obsidian';
+import { addIcon, MarkdownPostProcessorContext, Plugin, WorkspaceLeaf } from 'obsidian';
 
 import { Cache } from './Cache';
 import { getCmDecorationExtension } from './CmDecorationExtension';
@@ -55,8 +55,8 @@ export default class MentionPlugin extends Plugin {
             this.initMentionView();
         }
 
-        this.registerMarkdownPostProcessor((element: HTMLElement) => {
-            const mentionPostProcessor = new MentionPostProcessor(element, this.settings);
+        this.registerMarkdownPostProcessor((element: HTMLElement, ctx: MarkdownPostProcessorContext) => {
+            const mentionPostProcessor = new MentionPostProcessor(element, this.settings, ctx);
             mentionPostProcessor.addPreviewMentionStyle();
             mentionPostProcessor.subscribeToMentionClick(this.previewClickHandler.bind(this));
         });
