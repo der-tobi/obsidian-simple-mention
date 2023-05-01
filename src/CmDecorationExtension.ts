@@ -3,6 +3,7 @@ import { Decoration, DecorationSet, EditorView, MatchDecorator, ViewPlugin, View
 import { App } from 'obsidian';
 
 import { CLASS_ME_MENTION, CLASS_MENTION } from './Constants';
+import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
 import { MentionSettings } from './Settings';
 
 export interface CmDecorationExtensionConfig {
@@ -29,6 +30,9 @@ export function getCmDecorationExtension(app: App, cfg: CmDecorationExtensionCon
 
             addDecorations(view: EditorView) {
                 let rangeSetBuilder = new RangeSetBuilder<Decoration>();
+
+                if (isFilePathInIgnoredDirectories(app.workspace.getActiveFile().path, settings)) return rangeSetBuilder.finish();
+
                 let mention = cfg.regexp;
                 for (let { from, to } of view.visibleRanges) {
                     let range = view.state.sliceDoc(from, to),
