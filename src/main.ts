@@ -37,23 +37,25 @@ export default class MentionPlugin extends Plugin {
             return mentionView;
         });
 
-        if (!this.app.workspace.layoutReady) {
-            this.app.workspace.onLayoutReady(async () => {
-                try {
-                    this.cache.init();
-                } catch (e) {
-                    console.error(e);
-                }
-                this.initMentionView();
-            });
+        if (this.app.workspace.layoutReady) {
+            this.initAfterLayoutReady();
         } else {
-            try {
-                this.cache.init();
-            } catch (e) {
-                console.error(e);
-            }
-            this.initMentionView();
+            this.app.workspace.onLayoutReady(async () => {
+                this.initAfterLayoutReady();
+            });
         }
+
+        this.addSettingTab(new MentionSettingsTab(this.app, this));
+    }
+
+    public initAfterLayoutReady() {
+        try {
+            this.cache.init();
+        } catch (e) {
+            console.error(e);
+        }
+
+        this.initMentionView();
 
         this.registerMarkdownPostProcessor((element: HTMLElement, ctx: MarkdownPostProcessorContext) => {
             const mentionPostProcessor = new MentionPostProcessor(element, this.settings, ctx);
@@ -73,7 +75,6 @@ export default class MentionPlugin extends Plugin {
             )
         );
 
-        this.addSettingTab(new MentionSettingsTab(this.app, this));
         this.registerEditorSuggest(new MentionSuggest(this.app, this.cache, this.settings));
     }
 
