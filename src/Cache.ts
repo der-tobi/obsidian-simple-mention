@@ -4,6 +4,7 @@ import { EventRef, MetadataCache, Notice, TAbstractFile, TFile, Vault } from 'ob
 
 import { CacheDb, IMention, IOccurence } from './CacheDb';
 import { cyrb53Hash } from './cyrb53Hash';
+import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
 import { getMentionRegExp, TASK_COMPLETE_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
@@ -137,7 +138,8 @@ export class Cache {
     }
 
     private async getIndexableFile(file: TFile): Promise<IndexableFile> {
-        if (this.isInIgnoredDirectory(file)) return { file, hash: null, fileContent: null, reIndexNecessary: false, isIgnored: true };
+        if (isFilePathInIgnoredDirectories(file.path, this.settings))
+            return { file, hash: null, fileContent: null, reIndexNecessary: false, isIgnored: true };
 
         const cachedPageCacheItem = await this.db.fileHashes.get(file.path);
         if (file.stat.mtime === cachedPageCacheItem?.mtime)
@@ -177,7 +179,7 @@ export class Cache {
         await this.removeOccurencesOfPath(path);
 
         // if the directory is ignored, then there is no need to read further
-        if (this.settings.ignoredDirectories && this.isInIgnoredDirectory(indexableFile.file)) {
+        if (this.settings.ignoredDirectories && isFilePathInIgnoredDirectories(indexableFile.file.path, this.settings)) {
             return this.db.fileHashes.put(
                 { path: indexableFile.file.path, hash: indexableFile.hash, mtime: indexableFile.file.stat.mtime },
                 indexableFile.file.path
@@ -401,16 +403,16 @@ export class Cache {
         return this.db.mentions.bulkDelete(mentionsToDelete);
     }
 
-    private isInIgnoredDirectory(file: TFile): boolean {
-        for (let ignoredDirectory of this.settings.ignoredDirectories.split(',')) {
-            if (this.isDirectoryInPath(ignoredDirectory, file.path)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    // private isInIgnoredDirectory(file: TFile): boolean {
+    //     for (let ignoredDirectory of this.settings.ignoredDirectories.split(',')) {
+    //         if (this.isDirectoryInPath(ignoredDirectory, file.path)) {
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 
-    private isDirectoryInPath(directory: string, path: string): boolean {
-        return directory.trim() != '' && path.startsWith(directory.trim());
-    }
+    // private isDirectoryInPath(directory: string, path: string): boolean {
+    //     return directory.trim() != '' && path.startsWith(directory.trim());
+    // }
 }
