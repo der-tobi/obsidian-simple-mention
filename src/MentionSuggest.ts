@@ -10,6 +10,7 @@ import {
 } from 'obsidian';
 
 import { Cache } from './Cache';
+import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
 import { MENTION_SUGGEST_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
@@ -24,6 +25,8 @@ export class MentionSuggest extends EditorSuggest<Completition> {
     }
 
     public onTrigger(cursor: EditorPosition, editor: Editor, file: TFile): EditorSuggestTriggerInfo {
+        if (isFilePathInIgnoredDirectories(file.path, this.settings)) return;
+
         const line = editor.getLine(cursor.line).substring(0, cursor.ch);
 
         if (!line.contains(this.settings.mentionTriggerPhrase)) {
