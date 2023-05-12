@@ -5,7 +5,7 @@ import { EventRef, MetadataCache, Notice, TAbstractFile, TFile, Vault } from 'ob
 import { CacheDb, IMention, IOccurence } from './CacheDb';
 import { cyrb53Hash } from './cyrb53Hash';
 import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
-import { getMentionRegExp, TASK_COMPLETE_REG_EXP } from './RegExp';
+import { CODEBLOCK_REG_EXP, getMentionRegExp, TASK_COMPLETE_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
 class IndexableFile {
@@ -197,14 +197,27 @@ export class Cache {
         const matches: { matchArray: RegExpMatchArray; lineNumber: number }[] = [];
         const occurences: IOccurence[] = [];
 
+        // get Mention Matches
         fileLines.map((lineContent, lineIndex) => {
-            // TODO (FEAT): check if codeblock + settings --> exclude (+suggestion, editor and preview)
             const lineNumber = lineIndex + 1; // With the new editor, the first Line is index 1
             this.getMatches(lineContent).forEach((match) => matches.push({ matchArray: match, lineNumber }));
         });
 
+        const codeblocks = [...indexableFile.fileContent.matchAll(CODEBLOCK_REG_EXP)];
+        let codeblockPositions: [from: number, to: number][] = [];
+        codeblockPositions = codeblocks.map((c) => [c.index, c.index + c[0].length]);
+
+        const matchesWithoutCodeblocks = matches.filter(
+            (match) =>
+                codeblockPositions.find(
+                    (c) =>
+                        c[0] < match.matchArray.index + doc.line(match.lineNumber).from &&
+                        c[1] > match.matchArray.index + doc.line(match.lineNumber).from
+                ) == null
+        );
+
         await Promise.all(
-            matches.map(async (match) => {
+            matchesWithoutCodeblocks.map(async (match) => {
                 const name = match.matchArray[0].replace(this.triggerPhraseRegexp, '');
                 let mention = await this.db.mentions.get(name);
                 if (mention == null) {
