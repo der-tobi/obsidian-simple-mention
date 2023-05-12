@@ -2,9 +2,9 @@ import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView, MatchDecorator, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { App } from 'obsidian';
 
+import { getCodeblockPositions, isPositionInCodeblock } from './CodeblockHelper';
 import { CLASS_ME_MENTION, CLASS_MENTION } from './Constants';
 import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
-import { CODEBLOCK_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
 export interface CmDecorationExtensionConfig {
@@ -38,22 +38,22 @@ export function getCmDecorationExtension(app: App, cfg: CmDecorationExtensionCon
                 for (let { from, to } of view.visibleRanges) {
                     let range = view.state.sliceDoc(from, to);
 
-                    const codeblocks = [...range.matchAll(CODEBLOCK_REG_EXP)];
-                    let codeblockPositions: [from: number, to: number][] = [];
-                    codeblockPositions = codeblocks.map((c) => [from + c.index, from + c.index + c[0].length]);
-
+                    // TODO: Add Settings Value and check this also with &&
+                    const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(range, from);
                     const mentions = [...range.matchAll(mentionRegexp)];
-                    mentions.forEach((m) => {
-                        // TODO: Add Settings Value and check this also with &&
-                        if (codeblockPositions.find((c) => c[0] < from + m.index && c[1] > from + m.index) == null) {
-                            rangeSetBuilder.add(
-                                from + m.index,
-                                from + m.index + m[0].length,
-                                Decoration.mark({
-                                    class: m[1] != null ? CLASS_ME_MENTION : m[2] != null ? CLASS_MENTION : '',
-                                })
-                            );
-                        }
+                    const mentionsWithoutCodeblocks = mentions.filter(
+                        (mention) => !isPositionInCodeblock(codeblockPositions, from + mention.index)
+                    );
+
+                    mentionsWithoutCodeblocks.forEach((m) => {
+                        rangeSetBuilder.add(
+                            from + m.index,
+                            from + m.index + m[0].length,
+                            Decoration.mark({
+                                class: m[1] != null ? CLASS_ME_MENTION : m[2] != null ? CLASS_MENTION : '',
+                            })
+                        );
+                        // }
                     });
                 }
                 return rangeSetBuilder.finish();

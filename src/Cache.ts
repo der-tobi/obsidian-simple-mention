@@ -3,9 +3,10 @@ import { Mutex } from 'async-mutex';
 import { EventRef, MetadataCache, Notice, TAbstractFile, TFile, Vault } from 'obsidian';
 
 import { CacheDb, IMention, IOccurence } from './CacheDb';
+import { getCodeblockPositions, isPositionInCodeblock } from './CodeblockHelper';
 import { cyrb53Hash } from './cyrb53Hash';
 import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
-import { CODEBLOCK_REG_EXP, getMentionRegExp, TASK_COMPLETE_REG_EXP } from './RegExp';
+import { getMentionRegExp, TASK_COMPLETE_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
 class IndexableFile {
@@ -203,17 +204,9 @@ export class Cache {
             this.getMatches(lineContent).forEach((match) => matches.push({ matchArray: match, lineNumber }));
         });
 
-        const codeblocks = [...indexableFile.fileContent.matchAll(CODEBLOCK_REG_EXP)];
-        let codeblockPositions: [from: number, to: number][] = [];
-        codeblockPositions = codeblocks.map((c) => [c.index, c.index + c[0].length]);
-
+        const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(indexableFile.fileContent);
         const matchesWithoutCodeblocks = matches.filter(
-            (match) =>
-                codeblockPositions.find(
-                    (c) =>
-                        c[0] < match.matchArray.index + doc.line(match.lineNumber).from &&
-                        c[1] > match.matchArray.index + doc.line(match.lineNumber).from
-                ) == null
+            (match) => !isPositionInCodeblock(codeblockPositions, match.matchArray.index + doc.line(match.lineNumber).from)
         );
 
         await Promise.all(

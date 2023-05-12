@@ -10,8 +10,9 @@ import {
 } from 'obsidian';
 
 import { Cache } from './Cache';
+import { getCodeblockPositions, isPositionInCodeblock } from './CodeblockHelper';
 import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
-import { CODEBLOCK_REG_EXP, MENTION_SUGGEST_REG_EXP } from './RegExp';
+import { MENTION_SUGGEST_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
 interface Completition {
@@ -27,13 +28,10 @@ export class MentionSuggest extends EditorSuggest<Completition> {
     public onTrigger(cursor: EditorPosition, editor: Editor, file: TFile): EditorSuggestTriggerInfo {
         if (isFilePathInIgnoredDirectories(file.path, this.settings)) return;
 
-        // TODO: export this to function and reuse -> CodeBlockHelper
-        const codeblocks = [...editor.getValue().matchAll(CODEBLOCK_REG_EXP)];
-        let codeblockPositions: [from: number, to: number][] = [];
-        codeblockPositions = codeblocks.map((c) => [c.index, c.index + c[0].length]);
-
+        const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(editor.getValue());
         const cursorPos = editor.posToOffset(cursor);
-        if (codeblockPositions.find((c) => c[0] < cursorPos && c[1] > cursorPos)) return;
+
+        if (isPositionInCodeblock(codeblockPositions, cursorPos)) return;
 
         const line = editor.getLine(cursor.line).substring(0, cursor.ch);
 
