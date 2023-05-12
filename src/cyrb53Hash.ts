@@ -17,29 +17,3 @@ export function cyrb53Hash(str: string, seed = 0) {
     h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
     return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
-
-// private getMentionPositions(): Array<MentionPosition> {
-//     return [...this.mentions.values()].reduce((acc: Array<MentionPosition>, curr: Mention) => {
-//         curr.occurences.forEach((o) => {
-//             acc.push({
-//                 name: curr.name,
-//                 path: o.path,
-//                 linenumber: o.line.number,
-//                 positionFrom: o.startOccurence,
-//                 positionTo: o.endOccurence,
-//             });
-//         });
-//         return acc;
-//     }, []);
-// }
-
-// private flatMentionLinePathObjectComparer(a: MentionPosition, b: MentionPosition) {
-//     return (
-//         a.name.localeCompare(b.name) ||
-//         a.path.localeCompare(b.path) ||
-//         a.linenumber - b.linenumber ||
-//         a.positionFrom - b.positionFrom ||
-//         a.positionTo - b.positionTo
-//     );
-//     }
-// }
