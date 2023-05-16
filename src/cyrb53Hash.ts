@@ -1,11 +1,10 @@
-export function cyrb53Hash(str: string, seed = 0) {
-    /*
+/*
     cyrb53 (c) 2018 bryc (github.com/bryc)
     A fast and simple hash function with decent collision resistance.
     Largely inspired by MurmurHash2/3, but with a focus on speed/simplicity.
     Public domain. Attribution appreciated.
 */
-    // const cyrb53 = function(str, seed = 0) {
+export function cyrb53Hash(str: string, seed = 0) {
     let h1 = 0xdeadbeef ^ seed,
         h2 = 0x41c6ce57 ^ seed;
     for (let i = 0, ch; i < str.length; i++) {

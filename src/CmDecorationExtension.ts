@@ -50,7 +50,6 @@ export function getCmDecorationExtension(app: App, cfg: CmDecorationExtensionCon
                                 class: m[1] != null ? CLASS_ME_MENTION : m[2] != null ? CLASS_MENTION : '',
                             })
                         );
-                        // }
                     });
                 }
                 return rangeSetBuilder.finish();

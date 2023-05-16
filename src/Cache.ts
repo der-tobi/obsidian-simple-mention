@@ -409,17 +409,4 @@ export class Cache {
         const mentionsToDelete = cachedMentions.filter((m) => !currentMentions.includes(m));
         return this.db.mentions.bulkDelete(mentionsToDelete);
     }
-
-    // private isInIgnoredDirectory(file: TFile): boolean {
-    //     for (let ignoredDirectory of this.settings.ignoredDirectories.split(',')) {
-    //         if (this.isDirectoryInPath(ignoredDirectory, file.path)) {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
-
-    // private isDirectoryInPath(directory: string, path: string): boolean {
-    //     return directory.trim() != '' && path.startsWith(directory.trim());
-    // }
 }
