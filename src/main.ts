@@ -125,7 +125,6 @@ export default class MentionPlugin extends Plugin {
 
     private async previewClickHandler(text: string) {
         await this.activateMentionView();
-        // TODO (FIX): If we unload and reload the Plugin, the postprocessor is not initialized, so click on a mention throws an error. Reload Editors?
         this.app.workspace.getActiveViewOfType(MentionView).selectMentionByKey(text.replace(this.settings.mentionTriggerPhrase, ''));
     }
 
