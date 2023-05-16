@@ -1,5 +1,5 @@
 # Obsidian simple mention
-A simple plugin that visually highlights mentions and suggests existing ones as you write.   
+A simple plugin that visually highlights mentions and suggests existing ones as you write (except in codeblocks).   
 The mention prefix can be customized and defaults to `@`.  
 Find all occurrences of a mention in the side pane and jump to the corresponding line in the document.  
 Distinguish your personal mentions from the others by a different color.
@@ -11,11 +11,12 @@ Filter your mentions by a phrase
 ![Filter your mentions](obsidian_filter.gif)
 
 ## Settings
-You can set:
-- the trigger phrase (@)
-- the color of the mentions (green)
-- the color of your own mentions (deeppink)
-- the name, how you want to mention yourself (Me)
+You can:
+- set the trigger phrase (@)
+- set the color of the mentions (green)
+- set the color of your own mentions (deeppink)
+- set the name, how you want to mention yourself (Me)
+- delete the cache (indexeddb)
 
 ## Shortcuts
 ### In edit mode
@@ -29,9 +30,11 @@ When you click on a mention, the right side pane opens with all occurrences of t
 ![Preview Mode shortcuts](obsidian_preview_klick.gif)
 
 ## Known issues
-- There seems to be an problem with large vaults (See [Issue](https://github.com/der-tobi/obsidian-simple-mention/issues/1)).
-- We need to restart Obsidian after adjusting the trigger phrase for the changes to take effect.
-- We need to restart Obsidian after changing the name of yourself for the changes to take effect.
+- We need to restart Obsidian after
+  - adjusting the trigger phrase for the changes to take effect.
+  - changing the name of yourself for the changes to take effect.
+  - ignoring a directory
+  - deleting the cache
 - Style could currently not be overridden by a template (simple fix)
 
 ## Ideas
@@ -39,6 +42,5 @@ When you click on a mention, the right side pane opens with all occurrences of t
   - eg. @group-x(@bob,@lisa)
   - usage: find all mentions of @bob and @lisa by searching for @group-x
 - Multi select of mentions in the view
-- Mark filterphrase in the view
 - Show sub bullet points
 - own color for each "person"
