@@ -195,8 +195,7 @@ export class Cache {
             );
         }
 
-        const matches: { matchArray: RegExpMatchArray; lineNumber: number }[] = [];
-        const occurences: IOccurence[] = [];
+        let matches: { matchArray: RegExpMatchArray; lineNumber: number }[] = [];
 
         // get Mention Matches
         fileLines.map((lineContent, lineIndex) => {
@@ -205,12 +204,14 @@ export class Cache {
         });
 
         const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(indexableFile.fileContent);
-        const matchesWithoutCodeblocks = matches.filter(
+        matches = matches.filter(
             (match) => !isPositionInCodeblock(codeblockPositions, match.matchArray.index + doc.line(match.lineNumber).from)
         );
 
+        const occurences: IOccurence[] = [];
+
         await Promise.all(
-            matchesWithoutCodeblocks.map(async (match) => {
+            matches.map(async (match) => {
                 const name = match.matchArray[0].replace(this.triggerPhraseRegexp, '');
                 let mention = await this.db.mentions.get(name);
                 if (mention == null) {

@@ -37,15 +37,12 @@ export function getCmDecorationExtension(app: App, cfg: CmDecorationExtensionCon
                 let mentionRegexp = cfg.regexp;
                 for (let { from, to } of view.visibleRanges) {
                     let range = view.state.sliceDoc(from, to);
+                    let mentions = [...range.matchAll(mentionRegexp)];
 
-                    // TODO: Add Settings Value and check this also with &&
                     const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(range, from);
-                    const mentions = [...range.matchAll(mentionRegexp)];
-                    const mentionsWithoutCodeblocks = mentions.filter(
-                        (mention) => !isPositionInCodeblock(codeblockPositions, from + mention.index)
-                    );
+                    mentions = mentions.filter((mention) => !isPositionInCodeblock(codeblockPositions, from + mention.index));
 
-                    mentionsWithoutCodeblocks.forEach((m) => {
+                    mentions.forEach((m) => {
                         rangeSetBuilder.add(
                             from + m.index,
                             from + m.index + m[0].length,
