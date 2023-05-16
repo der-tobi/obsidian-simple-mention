@@ -92,6 +92,10 @@ export class Cache {
         this.db.close();
     }
 
+    public deleteDb(): void {
+        this.db.delete();
+    }
+
     private async addMeMention(): Promise<string> {
         const meMention = { name: this.settings.meMentionName, isMe: true } as IMention;
         return this.db.mentions.put(meMention);

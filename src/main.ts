@@ -109,6 +109,10 @@ export default class MentionPlugin extends Plugin {
         this.style.updateStyle();
     }
 
+    public deleteCache() {
+        this.cache.deleteDb();
+    }
+
     private addAtIcon() {
         const atIcon = getAtIcon();
         addIcon(atIcon.iconId, atIcon.svgContent);

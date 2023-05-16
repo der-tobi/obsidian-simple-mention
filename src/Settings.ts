@@ -120,5 +120,17 @@ export class MentionSettingsTab extends PluginSettingTab {
                     this.plugin.saveSettings();
                 });
             });
+
+        new Setting(containerEl)
+            .setName('Delete cache')
+            .setDesc(
+                'All cache related data is deleted and will be recreated after reloading Obsidian. Please reload Obsidian after deleting.'
+            )
+            .addButton((button) => {
+                button.setButtonText('Delete cache');
+                button.onClick((_) => {
+                    this.plugin.deleteCache();
+                });
+            });
     }
 }
