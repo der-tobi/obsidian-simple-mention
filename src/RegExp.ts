@@ -4,6 +4,7 @@ export const TASK_REG_EXP = new RegExp(/\[[ x]{1}\]/);
 export const TASK_COMPLETE_REG_EXP = new RegExp(/^\- \[x{1}\]/);
 export const CODEBLOCK_REG_EXP = new RegExp('```[a-zA-Z0-9\\w\\d\\s!@#$%^&*()_+-=\\[\\]{};\':"\\|,.<>/?]*```', 'gm');
 export const CODE_INLINE_REG_EXP = new RegExp('`[a-zA-Z0-9\\w\\d\\s!@#$%^&*()_+-=\\[\\]{};\':"\\|,.<>/?]*`', 'g');
+export const LINK_REG_EXP = new RegExp(/(\[[^\]]+\]\([^)]+\)|<[^>]+>)/g);
 
 export function getMeMentionOrMentionRegex(trigger: string, meMentionName: string): RegExp {
     return new RegExp(getMeMentionRegExp(trigger, meMentionName).source + '|' + getMentionRegExp(trigger).source, 'gmu');

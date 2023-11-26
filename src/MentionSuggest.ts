@@ -12,6 +12,7 @@ import {
 import { Cache } from './Cache';
 import { getCodeblockPositions, isPositionInCodeblock } from './CodeblockHelper';
 import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
+import { getLinkPositions, isPositionInLink } from './LinkHelper';
 import { MENTION_SUGGEST_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
@@ -29,9 +30,11 @@ export class MentionSuggest extends EditorSuggest<Completition> {
         if (isFilePathInIgnoredDirectories(file.path, this.settings)) return;
 
         const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(editor.getValue());
+        const linkPositions: [from: number, to: number][] = getLinkPositions(editor.getValue());
         const cursorPos = editor.posToOffset(cursor);
 
         if (isPositionInCodeblock(codeblockPositions, cursorPos)) return;
+        if (isPositionInLink(linkPositions, cursorPos)) return;
 
         const line = editor.getLine(cursor.line).substring(0, cursor.ch);
 
