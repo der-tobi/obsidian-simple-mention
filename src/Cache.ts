@@ -6,6 +6,7 @@ import { CacheDb, IMention, IOccurence } from './CacheDb';
 import { getCodeblockPositions, isPositionInCodeblock } from './CodeblockHelper';
 import { cyrb53Hash } from './cyrb53Hash';
 import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
+import { getLinkPositions, isPositionInLink } from './LinkHelper';
 import { getMentionRegExp, TASK_COMPLETE_REG_EXP } from './RegExp';
 import { MentionSettings } from './Settings';
 
@@ -210,6 +211,11 @@ export class Cache {
         const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(indexableFile.fileContent);
         matches = matches.filter(
             (match) => !isPositionInCodeblock(codeblockPositions, match.matchArray.index + doc.line(match.lineNumber).from)
+        );
+
+        const linkPositions: [from: number, to: number][] = getLinkPositions(indexableFile.fileContent);
+        matches = matches.filter(
+            (match) => !isPositionInLink(linkPositions, match.matchArray.index + doc.line(match.lineNumber).from)
         );
 
         const occurences: IOccurence[] = [];

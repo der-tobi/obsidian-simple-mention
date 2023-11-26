@@ -5,6 +5,7 @@ import { App } from 'obsidian';
 import { getCodeblockPositions, isPositionInCodeblock } from './CodeblockHelper';
 import { CLASS_ME_MENTION, CLASS_MENTION } from './Constants';
 import { isFilePathInIgnoredDirectories } from './IgnoreHelper';
+import { getLinkPositions, isPositionInLink } from './LinkHelper';
 import { MentionSettings } from './Settings';
 
 export interface CmDecorationExtensionConfig {
@@ -41,6 +42,9 @@ export function getCmDecorationExtension(app: App, cfg: CmDecorationExtensionCon
 
                     const codeblockPositions: [from: number, to: number][] = getCodeblockPositions(range, from);
                     mentions = mentions.filter((mention) => !isPositionInCodeblock(codeblockPositions, from + mention.index));
+
+                    const linkPositions: [from: number, to: number][] = getLinkPositions(range, from);
+                    mentions = mentions.filter((mention) => !isPositionInLink(linkPositions, from + mention.index));
 
                     mentions.forEach((m) => {
                         rangeSetBuilder.add(
